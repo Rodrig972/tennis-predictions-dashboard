@@ -1,0 +1,16 @@
+[build]
+  # Pas de build nécessaire pour une app Flask statique
+  publish = "."
+  command = ""
+
+[build.environment]
+  PYTHON_VERSION = "3.9"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[functions]
+  # Configuration pour les fonctions serverless si nécessaire
+  directory = "netlify/functions"

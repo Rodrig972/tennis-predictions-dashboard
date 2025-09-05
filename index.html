@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎾 Tennis Predictions Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .stat-number {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: #3b82f6;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .match-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 0;
+            border-left: 3px solid #4a90e2;
+            transition: transform 0.2s ease;
+            width: 100%;
+            max-width: 400px;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        .match-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .match-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .player {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .ranking {
+            font-size: 0.8rem;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        .odds {
+            font-size: 0.9rem;
+            color: #10b981;
+            font-weight: bold;
+        }
+        .match-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .favorite {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .player-photo {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .confidence {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .confidence.high { background: #10b981; }
+        .confidence.medium { background: #f59e0b; }
+        .confidence.low { background: #ef4444; }
+        .tennis-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 1.1rem;
+        }
+        .tennis-link:hover {
+            color: #3b82f6;
+        }
+        .section-title {
+            font-size: 1.8rem;
+            margin: 30px 0 20px 0;
+            text-align: center;
+            color: #60a5fa;
+        }
+        .tournament-title {
+            color: #4a90e2;
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #4a90e2;
+        }
+        
+        @media (max-width: 1000px) {
+            .matches-grid {
+                max-width: 650px;
+                gap: 20px;
+            }
+            .match-card {
+                max-width: 300px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }
+            .matches-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                max-width: 500px;
+                padding: 0 15px;
+            }
+            .match-card {
+                padding: 12px 16px;
+            }
+            .match-info {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .match-footer {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .match-card {
+                padding: 10px 12px;
+            }
+            .matches-grid {
+                padding: 0 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎾 Tennis Predictions Dashboard</h1>
+            <p>Prédictions ML en temps réel • US Open 2025</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-matches">8</div>
+                <div>Matchs Analysés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="ml-predictions">8</div>
+                <div>Prédictions ML</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avg-confidence">65.4%</div>
+                <div>Confiance Moyenne</div>
+            </div>
+        </div>
+
+        <div class="section-title tournament-title">🏆 Matchs ATP</div>
+        <div id="atp-matches">
+            <div class="matches-grid">
+                <div class="match-card">
+                    <div class="match-header">
+                        <div><strong>05/09/25</strong> - 21:00</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">SF</div>
+                    </div>
+                    <div class="match-info">
+                        <div class="player">
+                            <span class="ranking">#1</span>
+                            <span>Sinner</span>
+                            <span class="odds">@1.03</span>
+                        </div>
+                        <div style="font-size: 1.2rem; color: #666; margin: 0 20px;">vs</div>
+                        <div class="player" style="text-align: right;">
+                            <span class="odds">@13.27</span>
+                            <span>Auger Aliassime</span>
+                            <span class="ranking">#27</span>
+                        </div>
+                    </div>
+                    <div class="match-footer">
+                        <div class="favorite">
+                            <span>Favori: Sinner</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="confidence medium">60%</span>
+                            <a href="https://www.tennisexplorer.com" target="_blank" class="tennis-link">🔗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="match-card">
+                    <div class="match-header">
+                        <div><strong>05/09/25</strong> - 23:00</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">SF</div>
+                    </div>
+                    <div class="match-info">
+                        <div class="player">
+                            <span class="ranking">#2</span>
+                            <span>Djokovic</span>
+                            <span class="odds">@3.89</span>
+                        </div>
+                        <div style="font-size: 1.2rem; color: #666; margin: 0 20px;">vs</div>
+                        <div class="player" style="text-align: right;">
+                            <span class="odds">@1.26</span>
+                            <span>Alcaraz</span>
+                            <span class="ranking">#3</span>
+                        </div>
+                    </div>
+                    <div class="match-footer">
+                        <div class="favorite">
+                            <span>⭐ Favori: Alcaraz</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="confidence high">72%</span>
+                            <a href="https://www.tennisexplorer.com" target="_blank" class="tennis-link">🔗</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title tournament-title">🏆 Matchs WTA</div>
+        <div id="wta-matches">
+            <div class="matches-grid">
+                <div class="match-card">
+                    <div class="match-header">
+                        <div><strong>05/09/25</strong> - 19:00</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">SF</div>
+                    </div>
+                    <div class="match-info">
+                        <div class="player">
+                            <span class="ranking">#2</span>
+                            <span>Sabalenka</span>
+                            <span class="odds">@1.32</span>
+                        </div>
+                        <div style="font-size: 1.2rem; color: #666; margin: 0 20px;">vs</div>
+                        <div class="player" style="text-align: right;">
+                            <span class="odds">@3.42</span>
+                            <span>Pegula</span>
+                            <span class="ranking">#6</span>
+                        </div>
+                    </div>
+                    <div class="match-footer">
+                        <div class="favorite">
+                            <span>⭐ Favori: Sabalenka</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="confidence high">78%</span>
+                            <a href="https://www.tennisexplorer.com" target="_blank" class="tennis-link">🔗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="match-card">
+                    <div class="match-header">
+                        <div><strong>05/09/25</strong> - 21:00</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">SF</div>
+                    </div>
+                    <div class="match-info">
+                        <div class="player">
+                            <span class="ranking">#88</span>
+                            <span>Osaka</span>
+                            <span class="odds">@1.84</span>
+                        </div>
+                        <div style="font-size: 1.2rem; color: #666; margin: 0 20px;">vs</div>
+                        <div class="player" style="text-align: right;">
+                            <span class="odds">@1.96</span>
+                            <span>Anisimova</span>
+                            <span class="ranking">#47</span>
+                        </div>
+                    </div>
+                    <div class="match-footer">
+                        <div class="favorite">
+                            <span>Favori: Osaka</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="confidence medium">52%</span>
+                            <a href="https://www.tennisexplorer.com" target="_blank" class="tennis-link">🔗</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

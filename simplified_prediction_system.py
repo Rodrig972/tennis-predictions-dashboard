@@ -109,13 +109,13 @@ class SimplifiedTennisPredictionSystem:
     def _create_fallback_data(self):
         """Crée des données de fallback si le fichier Excel n'est pas disponible"""
         fallback_data = {
-            'Nom': ['Sinner', 'Auger Aliassime', 'Djokovic', 'Alcaraz', 'Sabalenka', 'Pegula', 'Osaka', 'Anisimova'],
-            'Classement': [1, 27, 2, 3, 2, 6, 88, 47],
+            'Nom': ['Sinner ', 'Auger Aliassime', 'Djokovic ', 'Alcaraz', 'Sabalenka ', 'Pegula', 'Osaka ', 'Anisimova'],
+            'Classement': [1, 27, 7, 2, 1, 4, 24, 9],
             'Tournoi': ['US Open (ATP)', 'US Open (ATP)', 'US Open (ATP)', 'US Open (ATP)', 'US Open (WTA)', 'US Open (WTA)', 'US Open (WTA)', 'US Open (WTA)'],
             'Round': ['SF', 'SF', 'SF', 'SF', 'SF', 'SF', 'SF', 'SF'],
             'Côtes': ['1,03', '13,27', '3,89', '1,26', '1,32', '3,42', '1,84', '1,96'],
             'Date': ['05/09/25'] * 8,
-            'Heure': ['21:00', '21:00', '23:00', '23:00', '19:00', '19:00', '21:00', '21:00']
+            'Heure': ['21:00', '21:00', '21:00', '21:00', '01:00', '01:00', '02:30', '02:30']
         }
         return pd.DataFrame(fallback_data)
 

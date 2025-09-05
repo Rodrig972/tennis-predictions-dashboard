@@ -538,6 +538,25 @@ def health():
         'system': 'SimpleML Dashboard'
     })
 
+@app.route('/api/debug')
+def debug():
+    """Endpoint de debug pour vérifier les données utilisées"""
+    try:
+        predictions = load_predictions()
+        return jsonify({
+            'predictions_loaded': len(predictions) if predictions else 0,
+            'using_fallback': len(predictions) == 0,
+            'sample_data_count': len(SAMPLE_MATCHES),
+            'excel_file_exists': prediction_system.players_data is not None if prediction_system else False,
+            'first_prediction': predictions[0] if predictions else None
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'predictions_loaded': 0,
+            'using_fallback': True
+        })
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5001))

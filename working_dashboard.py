@@ -539,10 +539,10 @@ def health():
     })
 
 if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 5001))
     print("=== DASHBOARD TENNIS FONCTIONNEL ===")
     print(f"Matchs charges: {len(SAMPLE_MATCHES)}")
-    print("Application disponible sur:")
-    print("- http://127.0.0.1:5001")
-    print("- http://localhost:5001")
+    print(f"Application disponible sur le port: {port}")
     
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    app.run(debug=False, host='0.0.0.0', port=port)

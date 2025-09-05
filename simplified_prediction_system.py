@@ -23,13 +23,17 @@ class SimplifiedTennisPredictionSystem:
         self.load_data()
     
     def load_data(self):
-        """Charge les données depuis le fichier Excel simplifié"""
+        # Charger les données depuis le fichier Excel
         try:
-            self.players_data = pd.read_excel(self.excel_file_path, sheet_name='StatsJoueurs')
-            print(f"OK - Données chargées: {len(self.players_data)} joueurs")
-            print(f"  Tournois: {', '.join(self.players_data['Tournoi'].unique())}")
+            df = pd.read_excel(self.excel_file_path, sheet_name='StatsJoueurs')
+            print(f"Données chargées: {len(df)} joueurs depuis {self.excel_file_path}")
+            return df
+        except FileNotFoundError:
+            print(f" Fichier {self.excel_file_path} non trouvé - utilisation des données de fallback")
+            return self._create_fallback_data()
         except Exception as e:
-            print(f"Erreur lors du chargement: {e}")
+            print(f"Erreur lors du chargement: {e} - utilisation des données de fallback")
+            return self._create_fallback_data()
     
     def load_ml_model(self):
         """Charge le modèle ML réel si disponible"""
@@ -102,8 +106,24 @@ class SimplifiedTennisPredictionSystem:
             print(f"Erreur ML: {e}")
             return None
     
+    def _create_fallback_data(self):
+        """Crée des données de fallback si le fichier Excel n'est pas disponible"""
+        fallback_data = {
+            'Nom': ['Sinner', 'Auger Aliassime', 'Djokovic', 'Alcaraz', 'Sabalenka', 'Pegula', 'Osaka', 'Anisimova'],
+            'Classement': [1, 27, 2, 3, 2, 6, 88, 47],
+            'Tournoi': ['US Open (ATP)', 'US Open (ATP)', 'US Open (ATP)', 'US Open (ATP)', 'US Open (WTA)', 'US Open (WTA)', 'US Open (WTA)', 'US Open (WTA)'],
+            'Round': ['SF', 'SF', 'SF', 'SF', 'SF', 'SF', 'SF', 'SF'],
+            'Côtes': ['1,03', '13,27', '3,89', '1,26', '1,32', '3,42', '1,84', '1,96'],
+            'Date': ['05/09/25'] * 8,
+            'Heure': ['21:00', '21:00', '23:00', '23:00', '19:00', '19:00', '21:00', '21:00']
+        }
+        return pd.DataFrame(fallback_data)
+
     def get_matches(self) -> List[Dict]:
         """Identifie les matchs à partir des données des joueurs"""
+        if self.players_data is None:
+            self.players_data = self.load_data()
+            
         matches = []
         
         # Grouper par tournoi

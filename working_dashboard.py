@@ -38,7 +38,7 @@ SAMPLE_MATCHES = [
         "Classement J1": 1,
         "Classement J2": 27,
         "Gagnant Prédit": "Sinner",
-        "Confiance (%)": 60.0,
+        "Confiance (%)": 76.3,
         "Cote J1": 1.03,
         "Cote J2": 13.27,
         "Round": "SF",
@@ -58,7 +58,7 @@ SAMPLE_MATCHES = [
         "Classement J1": 7,
         "Classement J2": 2,
         "Gagnant Prédit": "Alcaraz",
-        "Confiance (%)": 62.0,
+        "Confiance (%)": 59.3,
         "Cote J1": 3.89,
         "Cote J2": 1.26,
         "Round": "SF",
@@ -78,7 +78,7 @@ SAMPLE_MATCHES = [
         "Classement J1": 1,
         "Classement J2": 4,
         "Gagnant Prédit": "Sabalenka",
-        "Confiance (%)": 56.0,
+        "Confiance (%)": 67.7,
         "Cote J1": 1.32,
         "Cote J2": 3.42,
         "Round": "SF",
@@ -98,7 +98,7 @@ SAMPLE_MATCHES = [
         "Classement J1": 24,
         "Classement J2": 9,
         "Gagnant Prédit": "Anisimova",
-        "Confiance (%)": 54.0,
+        "Confiance (%)": 53.0,
         "Cote J1": 1.84,
         "Cote J2": 1.96,
         "Round": "SF",
@@ -518,11 +518,11 @@ def get_matches():
         # Charger les vraies prédictions
         predictions = load_predictions()
         
-        if predictions:
+        if predictions and len(predictions) > 0:
             print(f"API: {len(predictions)} prédictions ML chargées")
             return jsonify(predictions)
         else:
-            print("API: Utilisation des données de fallback")
+            print("API: Utilisation des données SAMPLE_MATCHES")
             return jsonify(SAMPLE_MATCHES)
             
     except Exception as e:

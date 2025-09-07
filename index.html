@@ -456,39 +456,232 @@
                 });
             });
 
-            // Charger les données depuis l'API locale
-            fetch('http://127.0.0.1:5001/api/matches')
-                .then(response => response.json())
-                .then(matches => {
-                    allMatches = matches;
-                    displayMatches(allMatches);
-                    updateStats(allMatches);
-                })
-                .catch(error => {
-                    console.error('Erreur de chargement:', error);
-                    // Fallback avec données statiques si l'API locale n'est pas disponible
-                    allMatches = [
-                        {
-                            "Date": "07/09/25",
-                            "Heure": "20:00",
-                            "Joueur 1": "Sinner",
-                            "Joueur 2": "Alcaraz",
-                            "Classement J1": 1,
-                            "Classement J2": 3,
-                            "Cote J1": 1.75,
-                            "Cote J2": 2.07,
-                            "Gagnant Prédit": "Sinner",
-                            "Confiance (%)": 69.5,
-                            "Round": "F",
-                            "Tournoi": "US Open (ATP)",
-                            "Photo J1": "",
-                            "Photo J2": "",
-                            "Lien Tennis Explorer": "https://www.tennisexplorer.com"
-                        }
-                    ];
-                    displayMatches(allMatches);
-                    updateStats(allMatches);
-                });
+            // Utiliser directement les données statiques pour le site déployé
+            allMatches = [
+                {
+                    "Date": "07/09/25",
+                    "Heure": "20:00",
+                    "Joueur 1": "Sinner",
+                    "Joueur 2": "Alcaraz",
+                    "Classement J1": 1,
+                    "Classement J2": 3,
+                    "Cote J1": 1.75,
+                    "Cote J2": 2.07,
+                    "Gagnant Prédit": "Sinner",
+                    "Confiance (%)": 69.5,
+                    "Round": "F",
+                    "Tournoi": "US Open (ATP)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/EyiUUwFm-I9HZAz1R.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/QHwt9QdA-0f842xJt.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3011844"
+                },
+                {
+                    "Date": "06/09/25",
+                    "Heure": "22:00",
+                    "Joueur 1": "Sabalenka",
+                    "Joueur 2": "Anisimova",
+                    "Classement J1": 2,
+                    "Classement J2": 47,
+                    "Cote J1": 1.32,
+                    "Cote J2": 3.42,
+                    "Gagnant Prédit": "Sabalenka",
+                    "Confiance (%)": 69.5,
+                    "Round": "F",
+                    "Tournoi": "US Open (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/EyiUUwFm-I9HZAz1R.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/QHwt9QdA-0f842xJt.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3011845"
+                },
+                {
+                    "Date": "08/09/25",
+                    "Heure": "18:00",
+                    "Joueur 1": "Kawa",
+                    "Joueur 2": "Jovic",
+                    "Classement J1": 118,
+                    "Classement J2": 73,
+                    "Cote J1": 4.15,
+                    "Cote J2": 1.22,
+                    "Gagnant Prédit": "Jovic",
+                    "Confiance (%)": 87.7,
+                    "Round": "1R",
+                    "Tournoi": "Guadalajara 2 WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/hK8RMOZs-jqX5MBQM.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/n9qpZeH4-tjoxv74H.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012267"
+                },
+                {
+                    "Date": "08/09/25",
+                    "Heure": "18:00",
+                    "Joueur 1": "Osorio",
+                    "Joueur 2": "Rakhimova",
+                    "Classement J1": 63,
+                    "Classement J2": 65,
+                    "Cote J1": 1.99,
+                    "Cote J2": 1.78,
+                    "Gagnant Prédit": "Rakhimova",
+                    "Confiance (%)": 55.0,
+                    "Round": "1R",
+                    "Tournoi": "Guadalajara 2 WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/dprcxPI4-MZZ4e4UF.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/tlfTl5wG-EgnkERlR.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012265"
+                },
+                {
+                    "Date": "08/09/25",
+                    "Heure": "18:00",
+                    "Joueur 1": "Sonmez",
+                    "Joueur 2": "Maria",
+                    "Classement J1": 81,
+                    "Classement J2": 42,
+                    "Cote J1": 1.79,
+                    "Cote J2": 1.99,
+                    "Gagnant Prédit": "Sonmez",
+                    "Confiance (%)": 52.9,
+                    "Round": "1R",
+                    "Tournoi": "Guadalajara 2 WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/OMOwxTdA-MBgfwjOH.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/0rUPs8aR-xAI115Gc.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012263"
+                },
+                {
+                    "Date": "08/09/25",
+                    "Heure": "18:00",
+                    "Joueur 1": "Trevisan",
+                    "Joueur 2": "Marino",
+                    "Classement J1": 285,
+                    "Classement J2": 117,
+                    "Cote J1": 2.37,
+                    "Cote J2": 1.56,
+                    "Gagnant Prédit": "Marino",
+                    "Confiance (%)": 50.9,
+                    "Round": "1R",
+                    "Tournoi": "Guadalajara 2 WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/tE1iadaR-U3ZuGemt.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/W8OxdXZb-WEnYoPDI.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012261"
+                },
+                {
+                    "Date": "08/09/25",
+                    "Heure": "18:00",
+                    "Joueur 1": "Sakkari",
+                    "Joueur 2": "Jacquemot",
+                    "Classement J1": 64,
+                    "Classement J2": 91,
+                    "Cote J1": 1.56,
+                    "Cote J2": 2.37,
+                    "Gagnant Prédit": "Sakkari",
+                    "Confiance (%)": 75.3,
+                    "Round": "1R",
+                    "Tournoi": "Guadalajara 2 WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/QZlPsnEm-65ljy5se.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/MZBWwk0R-vseebB7S.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012259"
+                },
+                {
+                    "Date": "08/09/25",
+                    "Heure": "18:00",
+                    "Joueur 1": "Arango",
+                    "Joueur 2": "Linette",
+                    "Classement J1": 84,
+                    "Classement J2": 37,
+                    "Cote J1": 2.45,
+                    "Cote J2": 1.53,
+                    "Gagnant Prédit": "Linette",
+                    "Confiance (%)": 62.1,
+                    "Round": "1R",
+                    "Tournoi": "Guadalajara 2 WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/ABtfJyIL-fX9OUm9D.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/WrgYApIL-fuUKOYyQ.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012257"
+                },
+                {
+                    "Date": "08/09/25",
+                    "Heure": "18:00",
+                    "Joueur 1": "Hunter",
+                    "Joueur 2": "Siniakova",
+                    "Classement J1": 1350,
+                    "Classement J2": 76,
+                    "Cote J1": 5.43,
+                    "Cote J2": 1.14,
+                    "Gagnant Prédit": "Siniakova",
+                    "Confiance (%)": 79.6,
+                    "Round": "1R",
+                    "Tournoi": "Guadalajara 2 WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/Wb1atUZb-EiVqZ6xJ.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/zLIuEHvG-noagZ2wS.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012255"
+                },
+                {
+                    "Date": "06/09/25",
+                    "Heure": "19:45",
+                    "Joueur 1": "Pedretti",
+                    "Joueur 2": "Bosio",
+                    "Classement J1": 478,
+                    "Classement J2": 402,
+                    "Cote J1": 1.42,
+                    "Cote J2": 2.72,
+                    "Gagnant Prédit": "Pedretti",
+                    "Confiance (%)": 72.7,
+                    "Round": "Q-R16",
+                    "Tournoi": "Sao Paulo WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/SzJylswG-nZY2wfpn.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/2wPK70Xs-QPX6xEah.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012345"
+                },
+                {
+                    "Date": "06/09/25",
+                    "Heure": "20:15",
+                    "Joueur 1": "Herrero Linana",
+                    "Joueur 2": "Grammatikopoulou",
+                    "Classement J1": 359,
+                    "Classement J2": 467,
+                    "Cote J1": 2.12,
+                    "Cote J2": 1.67,
+                    "Gagnant Prédit": "Grammatikopoulou",
+                    "Confiance (%)": 57.6,
+                    "Round": "Q-R16",
+                    "Tournoi": "Sao Paulo WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/r7mecyxG-prIdDWD0.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/6a84DnH4-tzLhf0iH.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012341"
+                },
+                {
+                    "Date": "06/09/25",
+                    "Heure": "21:30",
+                    "Joueur 1": "Rivoli",
+                    "Joueur 2": "Tona",
+                    "Classement J1": 1450,
+                    "Classement J2": 415,
+                    "Cote J1": 4.5,
+                    "Cote J2": 1.18,
+                    "Gagnant Prédit": "Tona",
+                    "Confiance (%)": 82.4,
+                    "Round": "Q-R16",
+                    "Tournoi": "Sao Paulo WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/Q9Zi3qzr-zJBkAf7s.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/fN8RHYIL-hlmhRE67.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012349"
+                },
+                {
+                    "Date": "06/09/25",
+                    "Heure": "22:00",
+                    "Joueur 1": "Tran",
+                    "Joueur 2": "Zeballos",
+                    "Classement J1": 345,
+                    "Classement J2": 587,
+                    "Cote J1": 1.57,
+                    "Cote J2": 2.29,
+                    "Gagnant Prédit": "Tran",
+                    "Confiance (%)": 68.4,
+                    "Round": "Q-R16",
+                    "Tournoi": "Sao Paulo WTA (WTA)",
+                    "Photo J1": "https://www.tennisexplorer.com/res/img/player/f1qM8JDm-vNpLFVA9.jpeg",
+                    "Photo J2": "https://www.tennisexplorer.com/res/img/player/Egbumd1R-p4kuR6kT.jpeg",
+                    "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3012347"
+                }
+            ];
+            displayMatches(allMatches);
+            updateStats(allMatches);
         });
     </script>
 </body>

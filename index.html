@@ -26,6 +26,52 @@
             text-align: center;
             margin-bottom: 40px;
             padding: 30px 0;
+            position: relative;
+        }
+        .stats-button {
+            position: absolute;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 15px;
+            border-radius: 50%;
+            text-decoration: none;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            backdrop-filter: blur(10px);
+        }
+        .stats-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-50%) scale(1.1);
+            color: white;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .stats-tooltip {
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .stats-button:hover .stats-tooltip {
+            opacity: 1;
         }
         .header h1 {
             font-size: 3.5rem;
@@ -45,10 +91,10 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             margin-bottom: 30px;
-            max-width: 800px;
+            max-width: 600px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -261,12 +307,27 @@
             .matches-grid {
                 padding: 0 10px;
             }
+            .stats-button {
+                position: static;
+                transform: none;
+                margin-bottom: 15px;
+                align-self: flex-end;
+            }
+            .header {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <a href="stats.html" class="stats-button">
+                📊
+                <div class="stats-tooltip">Voir les statistiques ML</div>
+            </a>
             <h1>🎾 Tennis Predictions Dashboard</h1>
             <p>Prédictions ML en temps réel • Tournois ATP/WTA 2025</p>
         </div>
@@ -277,18 +338,15 @@
                 <div>Tournois</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="total-matches">13</div>
-                <div>Matchs Totaux</div>
+                <div class="stat-number" id="total-matches">24</div>
+                <div>Prédictions Totales</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="ml-predictions">13</div>
-                <div>Prédictions ML</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="avg-confidence">58.0%</div>
+                <div class="stat-number" id="avg-confidence">70.0%</div>
                 <div>Confiance Moyenne</div>
             </div>
         </div>
+
 
         <!-- Filtres par niveau de confiance -->
         <div class="filter-section">
@@ -377,6 +435,7 @@
         // Variables globales
         let allMatches = [];
         let currentFilter = 'all';
+        let statsData = null;
 
         // Fonctions de filtrage
         function filterMatches(matches, filter) {
@@ -427,12 +486,41 @@
             });
         }
 
-        function updateStats(matches) {
-            document.getElementById('total-matches').textContent = allMatches.length;
-            document.getElementById('ml-predictions').textContent = allMatches.length;
+        // Fonction pour récupérer les statistiques depuis l'API (version simplifiée)
+        async function fetchStats() {
+            try {
+                const response = await fetch('http://localhost:5001/api/stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    statsData = data;
+                    updateStatsDisplay(data);
+                } else {
+                    updateStatsStatic();
+                }
+            } catch (error) {
+                updateStatsStatic();
+            }
+        }
+
+        function updateStatsDisplay(data) {
+            const stats = data.global_stats;
             
+            // Statistiques principales seulement
+            document.getElementById('tournaments').textContent = stats.unique_tournaments;
+            document.getElementById('total-matches').textContent = stats.total_predictions;
+            document.getElementById('avg-confidence').textContent = stats.avg_confidence + '%';
+        }
+
+        function updateStatsStatic() {
+            // Valeurs par défaut basées sur les données actuelles
+            document.getElementById('tournaments').textContent = '4';
+            document.getElementById('total-matches').textContent = '24';
+            document.getElementById('avg-confidence').textContent = '70.0%';
+        }
+
+        function updateStats(matches) {
+            // Cette fonction est maintenant utilisée pour les statistiques de filtrage local
             const avgConfidence = allMatches.reduce((sum, m) => sum + m['Confiance (%)'], 0) / allMatches.length;
-            document.getElementById('avg-confidence').textContent = avgConfidence.toFixed(1) + '%';
             
             const tournamentGroups = {};
             matches.forEach(match => {
@@ -440,7 +528,6 @@
                     tournamentGroups[match.Tournoi] = true;
                 }
             });
-            document.getElementById('tournaments').textContent = Object.keys(tournamentGroups).length;
         }
 
         // Gestionnaire d'événements pour les filtres
@@ -458,6 +545,9 @@
                 });
             });
 
+            // Pour le déploiement, utiliser les données statiques
+            updateStatsStatic();
+            
             // Utiliser directement les données statiques pour le site déployé
             allMatches = [
                 {

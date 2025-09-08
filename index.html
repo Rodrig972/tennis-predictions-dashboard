@@ -342,26 +342,28 @@
             return `
                 <div class="match-card">
                     <div class="match-header">
-                        <div><strong>${match.Date}</strong> - ${match.Heure}</div>
-                        <div style="font-size: 0.9rem; opacity: 0.8;">${match.Round}</div>
+                        <div>
+                            <strong>${match.Date || 'Date inconnue'}</strong> - ${match.Heure || 'Heure inconnue'}
+                        </div>
+                        <div style="font-size: 0.9rem; opacity: 0.8;">${match.Round || 'Round inconnu'}</div>
                     </div>
                     <div class="match-info">
                         <div class="player">
-                            <span class="ranking">#${match['Classement J1']}</span>
+                            <span class="ranking">#${match['Classement J1'] || 'N/A'}</span>
                             <span>${match['Joueur 1']}</span>
-                            <span class="odds">@${match['Cote J1']}</span>
+                            <span class="odds">@${match['Cote J1'] || 'N/A'}</span>
                         </div>
                         <div style="font-size: 1.2rem; color: #666; margin: 0 20px;">vs</div>
                         <div class="player" style="text-align: right;">
-                            <span class="odds">@${match['Cote J2']}</span>
+                            <span class="odds">@${match['Cote J2'] || 'N/A'}</span>
                             <span>${match['Joueur 2']}</span>
-                            <span class="ranking">#${match['Classement J2']}</span>
+                            <span class="ranking">#${match['Classement J2'] || 'N/A'}</span>
                         </div>
                     </div>
                     <div class="match-footer">
                         <div class="favorite">
-                            ${favoritePhoto ? `<img src="${favoritePhoto}" alt="Photo" class="player-photo">` : ''}
-                            <span>⭐ Favori: ${match['Gagnant Prédit']}</span>
+                            <img src="${getFavoritePlayerPhoto(match)}" alt="Photo" class="player-photo" style="display: none;" onload="this.style.display='inline';" onerror="this.style.display='none';">
+                            <span>${match['Confiance (%)'] >= 70 ? '⭐ ' : ''}Favori: ${match['Gagnant Prédit']}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span class="confidence ${getConfidenceClass(match['Confiance (%)'])}">${match['Confiance (%)']}%</span>

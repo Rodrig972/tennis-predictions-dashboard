@@ -15,12 +15,12 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             min-height: 100vh;
-            padding: 20px 0;
+            padding: clamp(10px, 3vw, 20px) 0;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 clamp(15px, 3vw, 20px);
         }
         .header {
             text-align: center;
@@ -29,7 +29,7 @@
             position: relative;
         }
         .header h1 {
-            font-size: 3rem;
+            font-size: clamp(2rem, 5vw, 3rem);
             font-weight: 800;
             margin-bottom: 15px;
             background: linear-gradient(45deg, #ffffff, #e0e7ff);
@@ -41,7 +41,7 @@
         .header p {
             margin: 15px 0 0 0;
             opacity: 0.9;
-            font-size: 1.2rem;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
             font-weight: 500;
         }
         .back-button {
@@ -52,10 +52,11 @@
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 12px 20px;
+            padding: clamp(8px, 2vw, 12px) clamp(15px, 3vw, 20px);
             border-radius: 25px;
             text-decoration: none;
             font-weight: 600;
+            font-size: clamp(0.8rem, 2vw, 1rem);
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
@@ -69,7 +70,7 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
             max-width: 400px;
@@ -204,6 +205,62 @@
                 align-items: center;
             }
         }
+        
+        /* Media Queries pour une meilleure responsivité */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px 0;
+                margin-bottom: 30px;
+            }
+            
+            .back-button {
+                position: static;
+                transform: none;
+                margin: 0 auto 20px;
+                display: inline-flex;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                max-width: 300px;
+            }
+            
+            .stat-card {
+                padding: 15px 10px;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 10px;
+            }
+            
+            .header {
+                padding: 15px 0;
+            }
+            
+            .stats-grid {
+                max-width: 250px;
+            }
+            
+            .stat-card {
+                padding: 12px 8px;
+            }
+            
+            .stat-number {
+                font-size: 1.8rem;
+            }
+            
+            .back-button {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -296,7 +353,7 @@
         // Fonction pour récupérer les statistiques depuis l'API
         async function fetchStats() {
             try {
-                const response = await fetch('http://localhost:5001/api/stats');
+                const response = await fetch('http://127.0.0.1:5002/api/stats');
                 if (response.ok) {
                     const data = await response.json();
                     statsData = data;
@@ -427,8 +484,8 @@
 
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
-            // Pour le déploiement, utiliser les données statiques
-            updateStatsStatic();
+            // Essayer de charger les données depuis l'API d'abord
+            fetchStats();
         });
     </script>
 </body>

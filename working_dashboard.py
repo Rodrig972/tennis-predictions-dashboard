@@ -2,7 +2,7 @@
 Dashboard Tennis fonctionnel - Avec intégration ML réelle
 """
 
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template_string, request, send_from_directory
 import json
 import os
 import sys
@@ -12,42 +12,24 @@ app = Flask(__name__)
 
 # Initialiser le système de prédiction
 prediction_system = None
+cached_predictions = None
 
 def load_predictions():
-    """Charge les vraies prédictions depuis le système ML"""
+    """Charge les vraies prédictions depuis le système ML ultime"""
     global prediction_system
     try:
         if prediction_system is None:
             prediction_system = SimplifiedTennisPredictionSystem()
         
         predictions = prediction_system.process_all_matches()
+        print(f"Prédictions ML Ultimate chargées: {len(predictions)}")
         return predictions
     except Exception as e:
-        print(f"Erreur chargement prédictions: {e}")
+        print(f"Erreur chargement prédictions Ultimate: {e}")
         return []
 
-# Données de fallback si le système ML échoue
+# Données de fallback si le système ML échoue - SYNCHRONISÉES avec les vraies données
 SAMPLE_MATCHES = [
-    {
-        "Match": "Sinner vs Auger Aliassime",
-        "Tournoi": "US Open (ATP)",
-        "Date": "05/09/25",
-        "Heure": "21:00",
-        "Joueur 1": "Sinner",
-        "Joueur 2": "Auger Aliassime",
-        "Classement J1": 1,
-        "Classement J2": 27,
-        "Gagnant Prédit": "Sinner",
-        "Confiance (%)": 76.3,
-        "Cote J1": 1.03,
-        "Cote J2": 13.27,
-        "Round": "SF",
-        "Modele": "SimpleML",
-        "Type": "ML",
-        "Photo J1": "https://www.tennisexplorer.com/res/img/player/OK7tW3bR-dEXkR0Wq.jpeg",
-        "Photo J2": "https://www.tennisexplorer.com/res/img/player/t42zJFgg-8fYqFF2n.jpeg",
-        "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3011243"
-    },
     {
         "Match": "Djokovic vs Alcaraz",
         "Tournoi": "US Open (ATP)",
@@ -58,60 +40,65 @@ SAMPLE_MATCHES = [
         "Classement J1": 7,
         "Classement J2": 2,
         "Gagnant Prédit": "Alcaraz",
-        "Confiance (%)": 59.3,
-        "Cote J1": 3.89,
-        "Cote J2": 1.26,
+        "Confiance (%)": 58.7,
+        "Cote J1": 3.86,
+        "Cote J2": 1.27,
         "Round": "SF",
-        "Modele": "SimpleML",
+        "Modele": "Real ML (67.2%)",
         "Type": "ML",
         "Photo J1": "https://www.tennisexplorer.com/res/img/player/2yxhH1ya-KKWyfaNo.jpeg",
         "Photo J2": "https://www.tennisexplorer.com/res/img/player/CYLI6SbR-EZcCkAic.jpeg",
         "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3010463"
     },
     {
-        "Match": "Sabalenka vs Pegula",
+        "Match": "Sinner vs Auger Aliassime",
+        "Tournoi": "US Open (ATP)",
+        "Date": "05/09/25",
+        "Heure": "21:00",
+        "Joueur 1": "Sinner",
+        "Joueur 2": "Auger Aliassime",
+        "Classement J1": 1,
+        "Classement J2": 27,
+        "Gagnant Prédit": "Sinner",
+        "Confiance (%)": 75.5,
+        "Cote J1": 1.03,
+        "Cote J2": 14.3,
+        "Round": "SF",
+        "Modele": "Real ML (67.2%)",
+        "Type": "ML",
+        "Photo J1": "https://www.tennisexplorer.com/res/img/player/OK7tW3bR-dEXkR0Wq.jpeg",
+        "Photo J2": "https://www.tennisexplorer.com/res/img/player/t42zJFgg-8fYqFF2n.jpeg",
+        "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3011243"
+    },
+    {
+        "Match": "Sabalenka vs Anisimova",
         "Tournoi": "US Open (WTA)",
         "Date": "05/09/25",
         "Heure": "01:00",
         "Joueur 1": "Sabalenka",
-        "Joueur 2": "Pegula",
+        "Joueur 2": "Anisimova",
         "Classement J1": 1,
-        "Classement J2": 4,
+        "Classement J2": 9,
         "Gagnant Prédit": "Sabalenka",
-        "Confiance (%)": 67.7,
-        "Cote J1": 1.32,
-        "Cote J2": 3.42,
+        "Confiance (%)": 70.5,
+        "Cote J1": 1.47,
+        "Cote J2": 2.72,
         "Round": "SF",
-        "Modele": "SimpleML",
+        "Modele": "Real ML (67.2%)",
         "Type": "ML",
         "Photo J1": "https://www.tennisexplorer.com/res/img/player/EyiUUwFm-I9HZAz1R.jpeg",
-        "Photo J2": "https://www.tennisexplorer.com/res/img/player/ChM8wNya-A19CsvyR.jpeg",
-        "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3010531"
-    },
-    {
-        "Match": "Osaka vs Anisimova",
-        "Tournoi": "US Open (WTA)",
-        "Date": "05/09/25",
-        "Heure": "02:30",
-        "Joueur 1": "Osaka",
-        "Joueur 2": "Anisimova",
-        "Classement J1": 24,
-        "Classement J2": 9,
-        "Gagnant Prédit": "Anisimova",
-        "Confiance (%)": 53.0,
-        "Cote J1": 1.84,
-        "Cote J2": 1.96,
-        "Round": "SF",
-        "Modele": "SimpleML",
-        "Type": "ML",
-        "Photo J1": "https://www.tennisexplorer.com/res/img/player/fknJF4ya-YgRjYWBf.jpeg",
         "Photo J2": "https://www.tennisexplorer.com/res/img/player/QHwt9QdA-0f842xJt.jpeg",
-        "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3011241"
+        "Lien Tennis Explorer": "https://www.tennisexplorer.com/match-detail/?id=3010531"
     }
 ]
 
 @app.route('/')
 def dashboard():
+    # Servir le fichier index.html mis à jour avec le design responsive
+    return send_from_directory('.', 'index.html')
+
+@app.route('/dashboard_old')
+def dashboard_old():
     return '''
 <!DOCTYPE html>
 <html lang="fr">
@@ -159,31 +146,39 @@ def dashboard():
             font-size: 1.2rem;
             font-weight: 500;
         }
-        .stats {
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .stat-card {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 30px 25px;
-            border-radius: 16px;
+            background: white;
+            padding: 15px 10px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            min-width: 0;
         }
         .stat-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         .stat-number {
-            font-size: 2.8rem;
+            font-size: 2.2rem;
             font-weight: 800;
             color: #3b82f6;
-            margin-bottom: 8px;
-            text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            margin-bottom: 5px;
+        }
+        .stat-card div:last-child {
+            color: #6b7280;
+            font-weight: 500;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .matches-grid {
             display: grid;
@@ -290,14 +285,56 @@ def dashboard():
             color: white;
         }
         .tournament-section {
-            margin: 12px 0;
+            margin-bottom: 30px;
         }
+        
         .tournament-title {
-            color: #4a90e2;
-            font-size: 1.3rem;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #4a90e2;
+            color: #3b82f6;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .filter-section h3 {
+            margin: 0 0 15px 0;
+            color: #1f2937;
+            font-size: 1.2rem;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: #6b7280;
+        }
+
+        .filter-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .filter-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
         }
         
         @media (max-width: 1000px) {
@@ -307,31 +344,6 @@ def dashboard():
             }
             .match-card {
                 max-width: 300px;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-            }
-            .matches-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-                max-width: 500px;
-                padding: 0 15px;
-            }
-            .match-card {
-                padding: 12px 16px;
-            }
-            .match-info {
-                flex-direction: column;
-                gap: 8px;
-            }
-            .match-footer {
-                flex-direction: column;
-                gap: 8px;
-                align-items: flex-start;
             }
         }
         
@@ -349,37 +361,41 @@ def dashboard():
     <div class="container">
         <div class="header">
             <h1>🎾 Tennis Predictions Dashboard</h1>
-            <p>Prédictions ML en temps réel • US Open 2025</p>
+            <p>Prédictions ML en temps réel • Tournois ATP/WTA 2025</p>
         </div>
 
-        <div class="stats">
+        <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number" id="total-matches">4</div>
-                <div>Matchs Total</div>
+                <div class="stat-number" id="tournaments">4</div>
+                <div>Tournois</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="ml-predictions">4</div>
+                <div class="stat-number" id="total-matches">13</div>
+                <div>Matchs Totaux</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="ml-predictions">13</div>
                 <div>Prédictions ML</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="avg-confidence">58.0%</div>
                 <div>Confiance Moyenne</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number" id="tournaments">2</div>
-                <div>Tournois</div>
+        </div>
+
+        <!-- Filtres par niveau de confiance -->
+        <div class="filter-section">
+            <h3>🎯 Filtrer par Confiance</h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">Toutes</button>
+                <button class="filter-btn" data-filter="high">Haute (>70%)</button>
+                <button class="filter-btn" data-filter="medium">Moyenne (50-70%)</button>
+                <button class="filter-btn" data-filter="low">Faible (<50%)</button>
             </div>
         </div>
 
         <div id="matches-container">
-            <div class="tournament-section">
-                <h2 class="tournament-title">🏆 US Open (ATP)</h2>
-                <div id="atp-matches"></div>
-            </div>
-            <div class="tournament-section">
-                <h2 class="tournament-title">🏆 US Open (WTA)</h2>
-                <div id="wta-matches"></div>
-            </div>
+            <!-- Les tournois seront générés dynamiquement -->
         </div>
     </div>
 
@@ -455,6 +471,98 @@ def dashboard():
             `;
         }
 
+        // Variables globales
+        let allMatches = [];
+        let currentFilter = 'all';
+
+        // Fonctions de filtrage
+        function filterMatches(matches, filter) {
+            if (filter === 'all') return matches;
+            
+            return matches.filter(match => {
+                const confidence = match['Confiance (%)'];
+                switch(filter) {
+                    case 'high': return confidence > 70;
+                    case 'medium': return confidence >= 50 && confidence <= 70;
+                    case 'low': return confidence < 50;
+                    default: return true;
+                }
+            });
+        }
+
+        function displayMatches(matches) {
+            // Grouper les matchs par tournoi
+            const tournamentGroups = {};
+            matches.forEach(match => {
+                const tournament = match.Tournoi;
+                if (!tournamentGroups[tournament]) {
+                    tournamentGroups[tournament] = [];
+                }
+                tournamentGroups[tournament].push(match);
+            });
+            
+            // Vider le conteneur principal
+            const matchesContainer = document.getElementById('matches-container');
+            matchesContainer.innerHTML = '';
+            
+            // Créer une section pour chaque tournoi
+            Object.keys(tournamentGroups).forEach(tournament => {
+                const tournamentMatches = tournamentGroups[tournament];
+                
+                // Déterminer l'emoji du tournoi
+                let emoji = '🏆';
+                if (tournament.includes('US Open')) emoji = '🇺🇸';
+                else if (tournament.includes('Guadalajara')) emoji = '🇲🇽';
+                else if (tournament.includes('Sao Paulo')) emoji = '🇧🇷';
+                
+                const tournamentSection = document.createElement('div');
+                tournamentSection.className = 'tournament-section';
+                tournamentSection.innerHTML = `
+                    <h2 class="tournament-title">${emoji} ${tournament}</h2>
+                    <div class="matches-grid">
+                        ${tournamentMatches.map(match => createMatchCard(match)).join('')}
+                    </div>
+                `;
+                
+                matchesContainer.appendChild(tournamentSection);
+            });
+        }
+
+        function updateStats(matches) {
+            document.getElementById('total-matches').textContent = allMatches.length;
+            document.getElementById('ml-predictions').textContent = allMatches.length;
+            
+            const avgConfidence = allMatches.reduce((sum, m) => sum + m['Confiance (%)'], 0) / allMatches.length;
+            document.getElementById('avg-confidence').textContent = avgConfidence.toFixed(1) + '%';
+            
+            const tournamentGroups = {};
+            matches.forEach(match => {
+                if (!tournamentGroups[match.Tournoi]) {
+                    tournamentGroups[match.Tournoi] = true;
+                }
+            });
+            document.getElementById('tournaments').textContent = Object.keys(tournamentGroups).length;
+        }
+
+        // Gestionnaire d'événements pour les filtres
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Retirer la classe active de tous les boutons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Ajouter la classe active au bouton cliqué
+                    this.classList.add('active');
+                    
+                    // Appliquer le filtre
+                    currentFilter = this.dataset.filter;
+                    const filteredMatches = filterMatches(allMatches, currentFilter);
+                    displayMatches(filteredMatches);
+                    updateStats(filteredMatches);
+                });
+            });
+        });
+
         // Charger les données
         console.log('Démarrage du chargement des données...');
         
@@ -469,35 +577,12 @@ def dashboard():
             .then(matches => {
                 console.log('Données reçues:', matches.length, 'matchs');
                 
-                // Mettre à jour les statistiques
-                document.getElementById('total-matches').textContent = matches.length;
-                document.getElementById('ml-predictions').textContent = matches.length;
+                // Stocker tous les matchs
+                allMatches = matches;
                 
-                const avgConfidence = matches.reduce((sum, m) => sum + m['Confiance (%)'], 0) / matches.length;
-                document.getElementById('avg-confidence').textContent = avgConfidence.toFixed(1) + '%';
-                
-                const atpContainer = document.getElementById('atp-matches');
-                const wtaContainer = document.getElementById('wta-matches');
-                
-                // Vider les conteneurs
-                atpContainer.innerHTML = '';
-                wtaContainer.innerHTML = '';
-                
-                // Créer les grilles pour ATP et WTA
-                const atpMatches = matches.filter(m => m.Tournoi.includes('ATP'));
-                const wtaMatches = matches.filter(m => m.Tournoi.includes('WTA'));
-                
-                if (atpMatches.length > 0) {
-                    atpContainer.innerHTML = '<div class="matches-grid">' + 
-                        atpMatches.map(match => createMatchCard(match)).join('') + 
-                        '</div>';
-                }
-                
-                if (wtaMatches.length > 0) {
-                    wtaContainer.innerHTML = '<div class="matches-grid">' + 
-                        wtaMatches.map(match => createMatchCard(match)).join('') + 
-                        '</div>';
-                }
+                // Afficher tous les matchs par défaut
+                displayMatches(allMatches);
+                updateStats(allMatches);
                 
                 console.log('Interface mise à jour avec succès');
             })
@@ -513,16 +598,16 @@ def dashboard():
 
 @app.route('/api/matches')
 def get_matches():
-    """Retourne les prédictions ML réelles"""
+    """Retourne les prédictions ML réelles - TOUJOURS fraîches"""
     try:
-        # Charger les vraies prédictions
+        # TOUJOURS charger les vraies prédictions (pas de cache)
         predictions = load_predictions()
         
         if predictions and len(predictions) > 0:
-            print(f"API: {len(predictions)} prédictions ML chargées")
+            print(f"API: {len(predictions)} prédictions ML fraîches chargées")
             return jsonify(predictions)
         else:
-            print("API: Utilisation des données SAMPLE_MATCHES")
+            print("API: Aucune prédiction ML - utilisation fallback (3 matchs)")
             return jsonify(SAMPLE_MATCHES)
             
     except Exception as e:
@@ -557,11 +642,38 @@ def debug():
             'using_fallback': True
         })
 
+@app.route('/stats.html')
+def stats_page():
+    """Servir la page des statistiques"""
+    try:
+        with open('stats.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "Page stats.html non trouvée", 404
+
+@app.route('/index.html')
+def index_page():
+    """Servir la page index"""
+    try:
+        with open('index.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "Page index.html non trouvée", 404
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5001))
     print("=== DASHBOARD TENNIS FONCTIONNEL ===")
-    print(f"Matchs charges: {len(SAMPLE_MATCHES)}")
+    
+    # Charger les vraies prédictions au démarrage et vider le cache
+    cached_predictions = None
+    real_predictions = load_predictions()
+    if real_predictions:
+        cached_predictions = real_predictions
+        match_count = len(real_predictions)
+    else:
+        match_count = len(SAMPLE_MATCHES)
+    print(f"Matchs charges: {match_count}")
     print(f"Application disponible sur le port: {port}")
     
     app.run(debug=False, host='0.0.0.0', port=port)

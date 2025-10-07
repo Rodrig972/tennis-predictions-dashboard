@@ -4,13 +4,17 @@ import joblib
 import os
 from datetime import datetime
 import warnings
+from player_nationalities import is_home_advantage, get_player_nationality, get_tournament_country
+from ai_context_analyzer import AIContextAnalyzer
 warnings.filterwarnings('ignore')
 
 class UltimateTennisPredictionSystem:
-    def __init__(self, excel_file_path='./data/Stats_tournois_en_cours.xlsx'):
+    def __init__(self, excel_file_path='./data/Stats_tournois_en_cours.xlsx', enable_ai_context=True):
         self.excel_file_path = excel_file_path
         self.models = {}
         self.model_weights = {}
+        self.enable_ai_context = enable_ai_context
+        self.ai_analyzer = AIContextAnalyzer() if enable_ai_context else None
         self.load_models()
         
     def load_models(self):
@@ -43,7 +47,7 @@ class UltimateTennisPredictionSystem:
         print(f"Total de {len(self.models)} modèles chargés")
     
     def calculate_features(self, match_info):
-        """Calcule les features pour un match - Compatible avec les modèles existants (10 features)"""
+        """Calcule les features pour un match - Compatible avec les modèles existants (11 features avec avantage domicile)"""
         try:
             # Features de base
             classement_j1 = float(match_info.get('classement_j1', 50))
@@ -69,24 +73,36 @@ class UltimateTennisPredictionSystem:
             else:
                 odds_advantage = 0
             
-            # Features supplémentaires pour atteindre 10 features (compatibilité avec real_tennis_model)
+            # NOUVEAU: Avantage domicile
+            joueur_1 = match_info.get('joueur_1', '')
+            joueur_2 = match_info.get('joueur_2', '')
+            tournoi = match_info.get('tournoi', '')
+            
+            home_advantage_j1 = 1 if is_home_advantage(joueur_1, tournoi) else 0
+            home_advantage_j2 = 1 if is_home_advantage(joueur_2, tournoi) else 0
+            
+            # Calculer l'avantage domicile net (1 si J1 à domicile, -1 si J2 à domicile, 0 sinon)
+            net_home_advantage = home_advantage_j1 - home_advantage_j2
+            
+            # Features supplémentaires pour compatibilité
             min_rank_norm = min(rank1_norm, rank2_norm)
             max_rank_norm = max(rank1_norm, rank2_norm)
             abs_rank_diff = abs(rank_diff)
             
-            # Construire le tableau de features (10 features comme attendu par real_tennis_model)
+            # Construire le tableau de features (11 features avec avantage domicile)
             features = np.array([[
                 rank1_norm, rank2_norm, rank_diff, rank_advantage,
                 surface_encoded, circuit_encoded, odds_advantage,
-                min_rank_norm, max_rank_norm, abs_rank_diff
+                min_rank_norm, max_rank_norm, abs_rank_diff,
+                net_home_advantage  # NOUVELLE FEATURE
             ]])
             
             return features
             
         except Exception as e:
             print(f"Erreur calcul features: {e}")
-            # Features par défaut équilibrées (10 features)
-            return np.array([[0.25, 0.25, 0.0, 0.5, 1, 1, 0.0, 0.25, 0.25, 0.0]])
+            # Features par défaut équilibrées (11 features)
+            return np.array([[0.25, 0.25, 0.0, 0.5, 1, 1, 0.0, 0.25, 0.25, 0.0, 0.0]])
     
     def ensemble_prediction(self, match_info):
         """Prédiction d'ensemble utilisant tous les modèles disponibles"""
@@ -100,27 +116,31 @@ class UltimateTennisPredictionSystem:
         
         for model_name, model in self.models.items():
             try:
+                # Vérifier le nombre de features attendu par le modèle
+                expected_features = getattr(model, 'n_features_in_', None)
+                if expected_features and expected_features != features.shape[1]:
+                    # Utiliser seulement les premières features pour les anciens modèles
+                    model_features = features[:, :expected_features]
+                else:
+                    model_features = features
+                
                 # Prédiction du modèle
                 if hasattr(model, 'predict_proba'):
-                    proba = model.predict_proba(features)[0]
+                    proba = model.predict_proba(model_features)[0]
                     # Assurer que nous avons la probabilité de victoire du joueur 1
                     pred_value = proba[1] if len(proba) > 1 else proba[0]
                 else:
-                    pred_value = model.predict(features)[0]
+                    pred_value = model.predict(model_features)[0]
                     # Si c'est une prédiction binaire (0 ou 1), convertir en probabilité
                     if pred_value in [0, 1]:
                         pred_value = 0.7 if pred_value == 1 else 0.3
                 
-                # S'assurer que la prédiction est dans [0, 1]
-                pred_value = max(0.05, min(0.95, float(pred_value)))
-                
                 predictions.append(pred_value)
-                weight = self.model_weights.get(model_name, 1.0)
-                weights.append(weight)
+                weights.append(1.0)  # Poids égal pour tous les modèles
                 
                 model_contributions[model_name] = {
                     'prediction': float(pred_value),
-                    'weight': float(weight)
+                    'weight': float(1.0)
                 }
                 
             except Exception as e:
@@ -138,15 +158,89 @@ class UltimateTennisPredictionSystem:
         # S'assurer que la probabilité est dans [0, 1]
         weighted_pred = max(0.05, min(0.95, weighted_pred))
         
+        # NOUVEAU: Amplification des probabilités pour des prédictions plus tranchées
+        # Fonction de polarisation : éloigne les probabilités de 50%
+        def polarize_probability(p, strength=1.5):
+            """Amplifie les probabilités pour les éloigner de 0.5"""
+            if p > 0.5:
+                # Amplifier vers 1
+                return 0.5 + (p - 0.5) * strength
+            else:
+                # Amplifier vers 0
+                return 0.5 - (0.5 - p) * strength
+        
+        # Appliquer la polarisation
+        weighted_pred = polarize_probability(weighted_pred, strength=1.5)
+        
+        # Amplification supplémentaire basée sur les cotes
+        cote_j1 = float(match_info.get('cote_j1', 2.0))
+        cote_j2 = float(match_info.get('cote_j2', 2.0))
+        
+        # Si les cotes montrent un favori clair (ratio > 2), amplifier davantage
+        cote_ratio = max(cote_j1 / cote_j2, cote_j2 / cote_j1)
+        if cote_ratio > 2.0:
+            # Favori très clair : amplification forte
+            weighted_pred = polarize_probability(weighted_pred, strength=1.8)
+        elif cote_ratio > 1.5:
+            # Favori clair : amplification modérée
+            weighted_pred = polarize_probability(weighted_pred, strength=1.3)
+        
+        # Amplification basée sur la différence de classement
+        classement_j1 = float(match_info.get('classement_j1', 50))
+        classement_j2 = float(match_info.get('classement_j2', 50))
+        diff_classement = abs(classement_j1 - classement_j2)
+        
+        if diff_classement > 50:
+            # Grande différence de classement : amplification forte
+            weighted_pred = polarize_probability(weighted_pred, strength=1.6)
+        elif diff_classement > 20:
+            # Différence modérée : amplification légère
+            weighted_pred = polarize_probability(weighted_pred, strength=1.2)
+        
+        # Limiter à des valeurs raisonnables (minimum 60% pour le favori)
+        if weighted_pred > 0.5:
+            weighted_pred = max(0.60, min(0.85, weighted_pred))
+        else:
+            weighted_pred = max(0.15, min(0.40, weighted_pred))
+        
         # Déterminer le gagnant et la confiance correctement
         proba_j1 = weighted_pred
         proba_j2 = 1 - weighted_pred
         
+        # Appliquer un bonus d'avantage domicile dans la prédiction finale
+        joueur_1 = match_info.get('joueur_1', 'Joueur 1')
+        joueur_2 = match_info.get('joueur_2', 'Joueur 2')
+        tournoi = match_info.get('tournoi', '')
+        
+        home_bonus = 0.05  # Bonus de 5% pour l'avantage domicile
+        if is_home_advantage(joueur_1, tournoi):
+            proba_j1 = min(0.95, proba_j1 + home_bonus)
+            proba_j2 = 1 - proba_j1
+        elif is_home_advantage(joueur_2, tournoi):
+            proba_j2 = min(0.95, proba_j2 + home_bonus)
+            proba_j1 = 1 - proba_j2
+        
+        # NOUVEAU: Analyse contextuelle IA pour ajustement psychologique
+        ai_context = None
+        if self.ai_analyzer:
+            try:
+                ai_comparison = self.ai_analyzer.compare_players_context(joueur_1, joueur_2, tournoi)
+                ai_context = ai_comparison
+                
+                # Appliquer l'ajustement IA (net_adjustment positif = avantage joueur 1)
+                ai_adjustment = ai_comparison.get('net_adjustment', 0)
+                proba_j1 = max(0.05, min(0.95, proba_j1 + ai_adjustment))
+                proba_j2 = 1 - proba_j1
+                
+                print(f"[IA] Context: {joueur_1} vs {joueur_2} - Ajustement: {ai_adjustment:+.3f}")
+            except Exception as e:
+                print(f"Erreur analyse IA: {e}")
+        
         if proba_j1 > proba_j2:
-            gagnant = match_info.get('joueur_1', 'Joueur 1')
+            gagnant = joueur_1
             confiance = proba_j1 * 100
         else:
-            gagnant = match_info.get('joueur_2', 'Joueur 2')
+            gagnant = joueur_2
             confiance = proba_j2 * 100
         
         return {
@@ -158,7 +252,8 @@ class UltimateTennisPredictionSystem:
             },
             'models_used': len(predictions),
             'model_contributions': model_contributions,
-            'modele_utilise': 'ultimate_ensemble'
+            'modele_utilise': 'ultimate_ensemble',
+            'ai_context': ai_context  # Ajouter le contexte IA
         }
     
     def _fallback_prediction(self, match_info):
@@ -189,12 +284,29 @@ class UltimateTennisPredictionSystem:
             # Fonction logistique: plus la différence est grande, plus j1 a de chances de gagner
             prob_classement_j1 = 1 / (1 + np.exp(-diff_norm))
             
-            # Combiner les probabilités (60% cotes, 40% classement)
-            proba_j1 = 0.6 * prob_cote_j1_norm + 0.4 * prob_classement_j1
+            # Combiner les probabilités (70% cotes, 30% classement pour plus de poids aux bookmakers)
+            proba_j1 = 0.7 * prob_cote_j1_norm + 0.3 * prob_classement_j1
             proba_j2 = 1 - proba_j1
             
+            # Fonction de polarisation pour fallback aussi
+            def polarize_probability(p, strength=1.5):
+                if p > 0.5:
+                    return 0.5 + (p - 0.5) * strength
+                else:
+                    return 0.5 - (0.5 - p) * strength
+            
+            # Appliquer la polarisation
+            proba_j1 = polarize_probability(proba_j1, strength=1.6)
+            
+            # Amplification basée sur la différence de cotes
+            cote_ratio = max(cote_j1 / cote_j2, cote_j2 / cote_j1) if cote_j2 > 0 else 1
+            if cote_ratio > 2.5:
+                proba_j1 = polarize_probability(proba_j1, strength=1.9)
+            elif cote_ratio > 1.8:
+                proba_j1 = polarize_probability(proba_j1, strength=1.4)
+            
             # Limiter les probabilités pour éviter les extrêmes
-            proba_j1 = max(0.05, min(0.95, proba_j1))
+            proba_j1 = max(0.15, min(0.85, proba_j1))
             proba_j2 = 1 - proba_j1
             
             # Déterminer le gagnant et la confiance
@@ -306,6 +418,10 @@ class UltimateTennisPredictionSystem:
                 except:
                     cote_j1, cote_j2 = 2.0, 2.0
             
+            # Extraire le H2H
+            h2h_j1 = str(player1.get('H2H', '0-0')).strip()
+            h2h_j2 = str(player2.get('H2H', '0-0')).strip()
+            
             # Préparer les informations du match
             match_info = {
                 'joueur_1': player1.get('Nom', ''),
@@ -318,6 +434,8 @@ class UltimateTennisPredictionSystem:
                 'cote_j2': cote_j2,
                 'date': date,
                 'heure': heure,
+                'h2h_j1': h2h_j1,
+                'h2h_j2': h2h_j2,
             }
             
             # Obtenir la prédiction ultime
@@ -349,10 +467,14 @@ class UltimateTennisPredictionSystem:
                 "Photo J1": self._get_player_photo(match_info['joueur_1']),
                 "Photo J2": self._get_player_photo(match_info['joueur_2']),
                 "Lien Tennis Explorer": lien_tennis_explorer,
+                "H2H J1": match_info.get('h2h_j1', '0-0'),
+                "H2H J2": match_info.get('h2h_j2', '0-0'),
+                "AI_Context": prediction.get('ai_context'),  # Ajouter le contexte IA
                 "System_Details": {
                     "model_contributions": prediction.get('model_contributions', {}),
                     "probabilites": prediction.get('probabilites', {}),
-                    "modele_utilise": prediction.get('modele_utilise', 'ultimate')
+                    "modele_utilise": prediction.get('modele_utilise', 'ultimate'),
+                    "ai_enabled": self.enable_ai_context
                 }
             }
             

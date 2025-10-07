@@ -2,11 +2,12 @@
 Dashboard Tennis fonctionnel - Avec intégration ML réelle
 """
 
-from flask import Flask, jsonify, send_from_directory, redirect
-import json
+from flask import Flask, render_template_string, jsonify, make_response
 import pandas as pd
+import json
 from datetime import datetime
-from flask import Flask, jsonify, render_template_string
+import os
+from player_nationalities import get_player_nationality, get_country_flag_emoji
 from ultimate_prediction_system import UltimateTennisPredictionSystem
 
 app = Flask(__name__)
@@ -121,6 +122,26 @@ def dashboard():
                 return [convert_numpy_types(v) for v in obj]
             return obj
         
+        # Ajouter les drapeaux des pays et l'avantage domicile aux prédictions
+        for prediction in predictions:
+            # Drapeaux des joueurs
+            j1_nationality = get_player_nationality(prediction.get('Joueur 1', ''))
+            j2_nationality = get_player_nationality(prediction.get('Joueur 2', ''))
+            
+            prediction['Drapeau J1'] = get_country_flag_emoji(j1_nationality) if j1_nationality else ''
+            prediction['Drapeau J2'] = get_country_flag_emoji(j2_nationality) if j2_nationality else ''
+            prediction['Pays J1'] = j1_nationality or ''
+            prediction['Pays J2'] = j2_nationality or ''
+            
+            # Avantage domicile
+            from player_nationalities import is_home_advantage
+            tournoi = prediction.get('Tournoi', '')
+            j1_home = is_home_advantage(prediction.get('Joueur 1', ''), tournoi)
+            j2_home = is_home_advantage(prediction.get('Joueur 2', ''), tournoi)
+            
+            prediction['Avantage Domicile J1'] = j1_home
+            prediction['Avantage Domicile J2'] = j2_home
+        
         predictions_clean = convert_numpy_types(predictions)
         predictions_json = json.dumps(predictions_clean, ensure_ascii=False)
         
@@ -200,7 +221,7 @@ def dashboard():
     <div class="container">
         <div class="header">
             <h1>🎾 Tennis Predictions Dashboard</h1>
-            <p>Prédictions ML en temps réel • Tournois ATP/WTA 2025 • MAJ: {timestamp} • v2.0</p>
+            <p>Prédictions ML avec Filtres Tournois • ATP/WTA 2025 • MAJ: {timestamp} • FILTRES TOURNOIS ACTIVÉS ✓</p>
         </div>
         
         <div class="stats">
@@ -223,14 +244,28 @@ def dashboard():
         </div>
         
         <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                <span style="margin-right: 15px;">🎯 Filtrer par Confiance</span>
+            <!-- Filtre par Confiance -->
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <span style="margin-right: 15px; font-weight: 600;">🎯 Filtrer par Confiance:</span>
+                </div>
+                <div>
+                    <button class="filter-btn active" data-filter="all" data-type="confidence">Toutes</button>
+                    <button class="filter-btn" data-filter="high" data-type="confidence">Haute (>70%)</button>
+                    <button class="filter-btn" data-filter="medium" data-type="confidence">Moyenne (50-70%)</button>
+                    <button class="filter-btn" data-filter="low" data-type="confidence">Faible (<50%)</button>
+                </div>
             </div>
+            
+            <!-- Filtre par Tournoi -->
             <div>
-                <button class="filter-btn active" data-filter="all">Toutes</button>
-                <button class="filter-btn" data-filter="high">Haute (>70%)</button>
-                <button class="filter-btn" data-filter="medium">Moyenne (50-70%)</button>
-                <button class="filter-btn" data-filter="low">Faible (<50%)</button>
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <span style="margin-right: 15px; font-weight: 600;">🏆 Filtrer par Tournoi:</span>
+                </div>
+                <div id="tournament-filters">
+                    <button class="filter-btn active" data-filter="all" data-type="tournament">Tous les Tournois</button>
+                    <!-- Les boutons de tournois seront ajoutés dynamiquement -->
+                </div>
             </div>
         </div>
         
@@ -238,27 +273,61 @@ def dashboard():
     </div>
 
     <script>
-        // Données Excel chargées en temps réel
+        // Données Excel chargées en temps réel avec filtres de tournois
         const matches = {predictions_json};
         let allMatches = matches;
-        let currentFilter = 'all';
+        let currentConfidenceFilter = 'all';
+        let currentTournamentFilter = 'all';
         
         console.log('🔥 Données Excel en temps réel:', matches.length, 'matchs');
         if (matches.length > 0) {{
             console.log('🎾 Premier match:', matches[0].Match, '-', matches[0].Tournoi);
         }}
         
-        function filterMatches(matches, filter) {{
-            if (filter === 'all') return matches;
-            return matches.filter(match => {{
-                const confidence = match['Confiance (%)'];
-                switch(filter) {{
-                    case 'high': return confidence > 70;
-                    case 'medium': return confidence >= 50 && confidence <= 70;
-                    case 'low': return confidence < 50;
-                    default: return true;
-                }}
+        // Générer les boutons de tournois dynamiquement
+        function generateTournamentFilters() {{
+            console.log('🏆 Génération des filtres de tournois...');
+            const tournaments = [...new Set(matches.map(match => match.Tournoi))].sort();
+            console.log('🏆 Tournois trouvés:', tournaments);
+            
+            const tournamentFiltersContainer = document.getElementById('tournament-filters');
+            const allButton = tournamentFiltersContainer.querySelector('[data-filter="all"]');
+            tournamentFiltersContainer.innerHTML = '';
+            tournamentFiltersContainer.appendChild(allButton);
+            
+            tournaments.forEach(tournament => {{
+                const button = document.createElement('button');
+                button.className = 'filter-btn';
+                button.setAttribute('data-filter', tournament);
+                button.setAttribute('data-type', 'tournament');
+                button.textContent = tournament;
+                tournamentFiltersContainer.appendChild(button);
+                console.log('➕ Bouton ajouté:', tournament);
             }});
+        }}
+        
+        function filterMatches(matches, confidenceFilter, tournamentFilter) {{
+            let filteredMatches = matches;
+            
+            // Filtre par confiance
+            if (confidenceFilter !== 'all') {{
+                filteredMatches = filteredMatches.filter(match => {{
+                    const confidence = match['Confiance (%)'];
+                    switch(confidenceFilter) {{
+                        case 'high': return confidence > 70;
+                        case 'medium': return confidence >= 50 && confidence <= 70;
+                        case 'low': return confidence < 50;
+                        default: return true;
+                    }}
+                }});
+            }}
+            
+            // Filtre par tournoi
+            if (tournamentFilter !== 'all') {{
+                filteredMatches = filteredMatches.filter(match => match.Tournoi === tournamentFilter);
+            }}
+            
+            return filteredMatches;
         }}
         
         function displayMatches(matchesToShow) {{
@@ -269,10 +338,56 @@ def dashboard():
                 const matchCard = document.createElement('div');
                 matchCard.className = 'match-card';
                 
+                // Préparer l'affichage du contexte IA
+                const aiContext = match.AI_Context;
+                let aiInsightHTML = '';
+                
+                if (aiContext && aiContext.net_adjustment !== 0) {{
+                    const advantage = aiContext.advantage;
+                    const adjustment = aiContext.net_adjustment;
+                    const absAdjustment = Math.abs(adjustment * 100).toFixed(1);
+                    const color = adjustment > 0 ? '#22c55e' : adjustment < 0 ? '#ef4444' : '#94a3b8';
+                    const icon = adjustment > 0 ? '📈' : adjustment < 0 ? '📉' : '➡️';
+                    
+                    // Récupérer les facteurs clés
+                    const p1Context = aiContext.player1_context || {{}};
+                    const p2Context = aiContext.player2_context || {{}};
+                    const p1Factors = p1Context.key_factors || [];
+                    const p2Factors = p2Context.key_factors || [];
+                    
+                    aiInsightHTML = `
+                        <div style="margin-top: 12px; padding: 10px; background: rgba(56, 189, 248, 0.1); border-radius: 8px; border-left: 3px solid ${{color}};">
+                            <div style="font-size: 0.85rem; font-weight: 600; color: ${{color}}; margin-bottom: 6px;">
+                                ${{icon}} Analyse IA Contextuelle
+                            </div>
+                            <div style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px;">
+                                Avantage psychologique: <strong style="color: ${{color}};">${{advantage}}</strong> (+${{absAdjustment}}%)
+                            </div>
+                            ${{p1Factors.length > 0 ? `
+                                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">
+                                    🎾 ${{match["Joueur 1"]}}: ${{p1Factors.slice(0, 2).join(', ')}}
+                                </div>
+                            ` : ''}}
+                            ${{p2Factors.length > 0 ? `
+                                <div style="font-size: 0.75rem; color: #94a3b8;">
+                                    🎾 ${{match["Joueur 2"]}}: ${{p2Factors.slice(0, 2).join(', ')}}
+                                </div>
+                            ` : ''}}
+                        </div>
+                    `;
+                }}
+                
                 matchCard.innerHTML = `
                     <div class="match-header">
                         <div class="tournament">${{match.Tournoi}}</div>
                         <div style="color: #b0bec5;">${{match.Date}} - ${{match.Heure}}</div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 12px 0; background: rgba(56, 189, 248, 0.1); border-radius: 8px; margin-bottom: 15px;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Head to Head</div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: #38bdf8;">
+                            ${{match["H2H J1"] || "0-0"}}
+                        </div>
                     </div>
                     
                     <div class="players">
@@ -299,6 +414,8 @@ def dashboard():
                             </a>
                         </div>
                     </div>
+                    
+                    ${{aiInsightHTML}}
                 `;
                 
                 container.appendChild(matchCard);
@@ -307,30 +424,56 @@ def dashboard():
         
         // Gestionnaire d'événements pour les filtres
         document.addEventListener('DOMContentLoaded', function() {{
-            const filterButtons = document.querySelectorAll('.filter-btn');
-            filterButtons.forEach(button => {{
-                button.addEventListener('click', function() {{
-                    // Retirer la classe active de tous les boutons
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    // Ajouter la classe active au bouton cliqué
-                    this.classList.add('active');
-                    
-                    // Appliquer le filtre
-                    currentFilter = this.dataset.filter;
-                    const filteredMatches = filterMatches(allMatches, currentFilter);
-                    displayMatches(filteredMatches);
+            console.log('🔧 Initialisation des filtres avec tournois...');
+            
+            // Générer les filtres de tournois
+            generateTournamentFilters();
+            
+            // Attacher les listeners après génération
+            setTimeout(() => {{
+                const filterButtons = document.querySelectorAll('.filter-btn');
+                console.log('🎯 Boutons de filtre trouvés:', filterButtons.length);
+                
+                filterButtons.forEach(button => {{
+                    button.addEventListener('click', function() {{
+                        const filterType = this.dataset.type;
+                        const filterValue = this.dataset.filter;
+                        console.log('🔄 Filtre cliqué:', filterType, '-', filterValue);
+                        
+                        if (filterType === 'confidence') {{
+                            document.querySelectorAll('[data-type="confidence"]').forEach(btn => btn.classList.remove('active'));
+                            this.classList.add('active');
+                            currentConfidenceFilter = filterValue;
+                        }} else if (filterType === 'tournament') {{
+                            document.querySelectorAll('[data-type="tournament"]').forEach(btn => btn.classList.remove('active'));
+                            this.classList.add('active');
+                            currentTournamentFilter = filterValue;
+                        }}
+                        
+                        // Appliquer les filtres combinés
+                        const filteredMatches = filterMatches(allMatches, currentConfidenceFilter, currentTournamentFilter);
+                        displayMatches(filteredMatches);
+                        console.log('✅ Filtres appliqués:', currentConfidenceFilter, '+', currentTournamentFilter, '=', filteredMatches.length, 'matchs');
+                        
+                        // Mettre à jour le compteur
+                        document.getElementById('total-matches').textContent = filteredMatches.length;
+                    }});
                 }});
-            }});
+            }}, 100);
         }});
         
         // Afficher tous les matchs par défaut
         displayMatches(matches);
-        console.log('✅ Dashboard en temps réel affiché avec', matches.length, 'matchs');
+        console.log('✅ Dashboard avec filtres de tournois affiché avec', matches.length, 'matchs');
     </script>
 </body>
 </html>"""
     
-    return html_content
+        return html_content
+    
+    except Exception as e:
+        print(f"Erreur dans dashboard(): {e}")
+        return f"<h1>Erreur: {e}</h1><p>Vérifiez que le fichier Excel existe et est accessible.</p>"
 
 @app.route('/dashboard_old')
 def dashboard_old():
@@ -1205,5 +1348,5 @@ if __name__ == '__main__':
         match_count = len(SAMPLE_MATCHES)
     print(f"Matchs charges: {match_count}")
     print(f"Application disponible sur le port: {port}")
-    
-    app.run(debug=False, host='0.0.0.0', port=port)
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5003)
